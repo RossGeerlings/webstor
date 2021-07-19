@@ -43,7 +43,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 #
-#
+#  
 
 import os
 import dns.query
@@ -1376,11 +1376,7 @@ def is_valid_hostname(hostname):
     return all(allowed.match(x) for x in hostname.split("."))
 
 
-start_time = time.time()
-
-
-if __name__ == '__main__':
-
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--ADD-HTTP-PORT", "-a", dest="HttpPortToAdd", default=None, help="Add a custom HTTP port.")
     parser.add_argument("--CLEAR-HTTP", "-aC", dest="ClearHttpPorts", default=False, action="store_true", \
@@ -1524,3 +1520,9 @@ if __name__ == '__main__':
         search_fingerprint(args.SearchFingerprint)    
     if args.SearchWappalyzer != None:
         search_wappalyzer(args.SearchWappalyzer)    
+
+
+start_time = time.time()
+
+if __name__ == '__main__':
+    main()

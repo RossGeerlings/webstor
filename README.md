@@ -46,6 +46,9 @@ future.
   - pip3 install js-regex
   - pip3 install gevent
 
+### Availability via PyPI
+  - If you are simply looking to run WebStor and not edit it, you may install the
+    prerequisite applications and then use 'sudo pip3 install webstor'.
 
 ## Basic usage
 ~~~

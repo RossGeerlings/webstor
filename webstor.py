@@ -87,22 +87,24 @@ if os.path.exists('./ws-sql.txt'):
         sMySQLpw = lMySQLlines[2].rstrip()
         mysqlconn = mysql.connector.connect(host=sMySQLhost, user=sMySQLuser, password=sMySQLpw)
     except Exception as e:
-        print("Error reading MySQL credential file or connecting to database. Falling back to default credentials. Error " \
-              "was: %s" % e)
+        print("Error reading MySQL credential file or connecting to database. Falling back to default credentials." \
+              " Error was: %s\n" % e)
         sMySQLhost="localhost"
         sMySQLuser="root"
         sMySQLpw=""
         try:
             mysqlconn = mysql.connector.connect(host=sMySQLhost, user=sMySQLuser, password=sMySQLpw)
         except Exception as e:
-            print("Failed after falling back to default credentials. Exiting. Error was: %s" % e)
-            Exit(1)
+            print("Failed after falling back to default credentials. Exiting. Error was: %s\n\n" \
+                   % e)
+            exit(1)
 else:
     try:
         mysqlconn = mysql.connector.connect(host=sMySQLhost, user=sMySQLuser, password=sMySQLpw)
     except Exception as e:
-        print("Failed connecting with MySQL default credentials. Exiting. Error was: %s" % e)
-        Exit(1)
+        print("Failed connecting with MySQL default credentials. Exiting. Error was: %s\n\n" \
+              "Do you have MariaDB 10.0.5 or newer installed?" % e)
+        exit(1)
 
 cursor = mysqlconn.cursor()
 
@@ -330,6 +332,11 @@ def perform_masscan():
                   "After simplifying private IP address into their shared /24 CIDR blocks, the list of targets is under " \
                   "the maxumum threshold. Proceeding with Masscan...")
 
+        pMasscanExe = os.path('/usr/bin/masscan')
+        if not pMasscanExe.exists():
+            print("Could not find /usr/bin/masscan.  Is Masscan installed?")
+            exit(1)
+         
     MasscanOut = subprocess.Popen(['/usr/bin/sudo', '/usr/bin/masscan', '-p'+sPorts, sAllTargets, '--rate=10000'], stdout=subprocess.PIPE, \
                                   stderr=subprocess.STDOUT)
     stdout,stderr = MasscanOut.communicate()

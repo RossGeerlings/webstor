@@ -784,7 +784,10 @@ def import_tsig(sFileName):
     sDomain = input("Enter a domain(s) to associate with this TSIG, comma separate if more than one: ")
     sDomain = sDomain.replace(" ", "")
     aDomains = sDomain.split(",")
-    sServer = input("Enter a DNS server to associate with domain(s) and TSIG: ") 
+    sServer = input("Enter a DNS server IP address to associate with domain(s) and TSIG: ") 
+    if not is_valid_ipv4(sServer):
+        print("DNS server must be given as a valid IPv4 IP address.  Exiting.")
+        exit(1)
     print("Those values are %s %s" % (aDomains, sServer))
     try:
         TSIGFile = open(sFileName, 'r') 
@@ -1307,8 +1310,8 @@ def import_zones_from_file(sFileName):
         print("The key name (first line of file) does not match any key name presently in the WebStor database. Exiting.")
         exit(1) 
     sKey = lZoneLines[0].rstrip()
-    if (not is_valid_ipv4(lZoneLines[1])) and (not is_valid_hostname(lZoneLines[1])):
-        print("The DNS Server name (second line of file) is not a valid name or IP. Exiting.")
+    if (not is_valid_ipv4(lZoneLines[1])):
+        print("The DNS Server name (second line of file) is not a valid IP address. Exiting.")
         exit(1) 
     sServer = lZoneLines[1].rstrip()
     try:

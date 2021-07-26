@@ -40,8 +40,8 @@ def get_config():
     # _version.py
     cfg = VersioneerConfig()
     cfg.VCS = "git"
-    cfg.style = "pep440-post"
-    cfg.tag_prefix = "v"
+    cfg.style = "pep440"
+    cfg.tag_prefix = "webstor"
     cfg.parentdir_prefix = "None"
     cfg.versionfile_source = "webstor/_version.py"
     cfg.verbose = False
@@ -454,6 +454,7 @@ def render(pieces, style):
     if not style or style == "default":
         style = "pep440"  # the default
 
+    
     if style == "pep440":
         rendered = render_pep440(pieces)
     elif style == "pep440-pre":
@@ -468,7 +469,7 @@ def render(pieces, style):
         rendered = render_git_describe_long(pieces)
     else:
         raise ValueError("unknown style '%s'" % style)
-
+    
     return {"version": rendered, "full-revisionid": pieces["long"],
             "dirty": pieces["dirty"], "error": None,
             "date": pieces.get("date")}
@@ -483,7 +484,7 @@ def get_versions():
 
     cfg = get_config()
     verbose = cfg.verbose
-
+    raise 
     try:
         return git_versions_from_keywords(get_keywords(), cfg.tag_prefix,
                                           verbose)

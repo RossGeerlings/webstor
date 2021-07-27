@@ -452,7 +452,7 @@ def render(pieces, style):
                 "date": None}
 
     if not style or style == "default":
-        style = "pep440"  # the default
+        style = "pep440-pre"  # the default
 
     
     if style == "pep440":

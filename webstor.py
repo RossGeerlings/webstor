@@ -332,8 +332,7 @@ def perform_masscan():
                   "After simplifying private IP address into their shared /24 CIDR blocks, the list of targets is under " \
                   "the maxumum threshold. Proceeding with Masscan...")
 
-        pMasscanExe = os.path('/usr/bin/masscan')
-        if not pMasscanExe.exists():
+        if not os.path.exists('/usr/bin/masscan'):
             print("Could not find /usr/bin/masscan.  Is Masscan installed?")
             exit(1)
          

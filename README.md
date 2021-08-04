@@ -36,19 +36,29 @@ future.
 
 ## Prerequisites
 ### Applications
-  - Masscan with sudo nopasswd for any user executing Masscan scanning via WebStor
-  - MariaDB 10.0.5 or later
+  * Masscan
+    - **If you will be using a cron job to update the database (typical), it is 
+      critical that you configure sudo nopasswd for any user executing Masscan
+      scanning via WebStor.**
+  * MariaDB 10.0.5 or later
+    - The default credentials used by webstor will be root and a blank password.
+      See the "Secure options" section for configuring WebStor to use other
+      usernames and passwords.
 
 ### Python libraries
-  - pip3 install dnspython
-  - pip3 install beautifulsoup4
-  - pip3 install mysql-connector-python
-  - pip3 install js-regex
-  - pip3 install gevent
+  * pip3 install dnspython
+  * pip3 install beautifulsoup4
+  * pip3 install mysql-connector-python
+  * pip3 install js-regex
+  * pip3 install gevent
+  * pip3 install requests 
 
 ### Availability via PyPI
-  - If you are simply looking to run WebStor and not edit it, you may install the
+  * If you are simply looking to run WebStor and not edit it, you may install the
     prerequisite applications and then use 'sudo pip3 install webstor'.
+  * After installing WebStor via PyPI, webstor will be in the path and can be run 
+    with at the command line regardless of working directory with 'webstor' 
+    instead of 'webstor.py', e.g. 'webstor -g'.  
 
 ## Basic usage
 ~~~
@@ -61,19 +71,20 @@ future.
                   [--SHOW-CONFIG-FULL] [--RUN-MASSCAN]
                   [--SET-MASSCAN-RANGES SETSCANRANGES]
                   [--IMPORT-MASSCAN-RANGES IMPORTSCANRANGES]
-                  [--DELETE-RANGE RANGETODELETE]
-                  [--IMPORT-ZONE-FILE IMPORTZONEFILE] [--ADD-PATH PATHTOADD]
+                  [--DELETE-RANGE RANGETODELETE] [--ADD-PATH PATHTOADD]
                   [--DELETE-PATH PATHTODELETE] [--CLEAR-PATHS]
                   [--REFRESH-RESPONSES] [--SEARCH-PATTERN SEARCHPATTERN]
                   [--SEARCH-CUSTOM-FINGERPRINT SEARCHFINGERPRINT]
                   [--SEARCH-WAPPALYZER SEARCHWAPPALYZER] [--NO-TSIG-KEY]
                   [--TSIG-KEY-IMPORT IMPORTTSIGFILE]
                   [--TSIG-KEY-REPLACE REPLACEMENTTSIGFILE]
-                  [--DELETE-TSIG TSIGTODELETE] [--USE-TSIG-FILE-ONLY]
+                  [--DELETE-TSIG TSIGTODELETE]
+                  [--USE-TSIG-FILE-ONLY USETSIGFILEONLY]
                   [--DOWNLOAD-NEW-WAPPALYZER] [--LIST-WAPPALYZER-TECH-NAMES]
                   [--ZONE-XFER] [--ADD-DOMAIN DOMAINDETAILS]
-                  [--DELETE-DOMAIN DOMAINTODELETE] [--CLEAR-DOMAINS]
-                  [--LIST-DOMAINS]
+                  [--DELETE-DOMAIN DOMAINTODELETE]
+                  [--IMPORT-ZONE-FILE IMPORTZONEFILE] [--CLEAR-DOMAINS]
+                  [--LIST-DOMAINS] [--SQL-CREDS SQLCREDSFILE]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -110,8 +121,6 @@ optional arguments:
                         file.
   --DELETE-RANGE RANGETODELETE, -mD RANGETODELETE
                         Delete scan range.
-  --IMPORT-ZONE-FILE IMPORTZONEFILE, -zI IMPORTZONEFILE
-                        Add domains for zone transfers from a file.
   --ADD-PATH PATHTOADD, -p PATHTOADD
                         Add paths for which to request and store responses
                         besides '/'.
@@ -140,11 +149,11 @@ optional arguments:
                         file
   --DELETE-TSIG TSIGTODELETE, -dT TSIGTODELETE
                         Delete a TSIG key from the database by name.
-  --USE-TSIG-FILE-ONLY, -tF
-                        Only use tsig file 'webstor.tsig' in present
-                        directory, do not use TSIGs stored in the DB. Applies
-                        to all domains, limiting WebStor to one TSIG for zone
-                        transfers in the current execution.
+  --USE-TSIG-FILE-ONLY USETSIGFILEONLY, -tF USETSIGFILEONLY
+                        Only use tsig file specified (full path), do not use
+                        TSIGs stored in the DB. Applies to all domains,
+                        limiting WebStor to one TSIG for zone transfers in the
+                        current execution.
   --DOWNLOAD-NEW-WAPPALYZER, -w
                         Download a new Wappalyzer fingerprints file directly
                         from GitHub. Overwrites existing Wappalyzer
@@ -159,9 +168,13 @@ optional arguments:
                         Key Name>.
   --DELETE-DOMAIN DOMAINTODELETE, -zD DOMAINTODELETE
                         Delete a DNS domain from the database by name.
+  --IMPORT-ZONE-FILE IMPORTZONEFILE, -zI IMPORTZONEFILE
+                        Add domains for zone transfers from a file.
   --CLEAR-DOMAINS, -zC  Clears all DNS domains stored in DB.
   --LIST-DOMAINS, -zL   Lists all DNS domains stored in DB.
-  ~~~
+  --SQL-CREDS SQLCREDSFILE, -q SQLCREDSFILE
+                        Use SQL credentials in file at specified path.
+~~~
   
 ## Steps to initially configure WebStor and populate database:
   NOTE: These steps assume your organization uses just one TSIG key for zone 
@@ -181,7 +194,7 @@ optional arguments:
    zone transfers. At the top of the file, insert two lines: the first with name 
    of your TSIG key (if you don't know what it is, it will be in the first line 
    of your TSIG file right after "key"), and the second line must be the name 
-   or IP address of your DNS server. The rest of the file must be every DNS, 
+   or IP address of your DNS server. The rest of the file must be every DNS 
    domain name for your organization, one per line. For a typical large 
    university, this will be names like engineering.stateu.<span></span>edu. 
 4. Run ./webstor.py -g to show the config and confirm database functionality.
@@ -241,14 +254,12 @@ your query results will always reflect the current state of your network.
 
 ## Secure options 
 If you do not want to use default MariaDB credentials (root, blank password), 
-you can provide credentials in an ACLed file called ws-sql.txt in the working 
-directory of the user running WebStor. The first line of the file must be 
-the server, e.g. localhost. The second line must be the sql user name. The 
-third line must be the password.
+you can use the -q option to specify the path to a file with credentials. The 
+first line of the file must be the server, e.g. localhost. The second line 
+must be the sql user name. The third line must be the password.
 
 If you do not wish to store your TSIG in key the database, you may use the -tF 
-option, which will cause WebStor to look for an ACLed TSIG key file named 
-ws-key.tsig in the working directory of the user running WebStor.
+option to specify the path to an ACLed TSIG key file. 
 
 If your organization utilizes multiple TSIG keys, you will need to store them 
 in the database.  They can each be added with the -tI option and domains can 

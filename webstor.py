@@ -74,30 +74,110 @@ from gevent import monkey
 
 orig_connect = urllib3.connection.HTTPConnection.connect
 
+parser = argparse.ArgumentParser()
+parser.add_argument("--ADD-HTTP-PORT", "-a", dest="HttpPortToAdd", default=None, help="Add a custom HTTP port.")
+parser.add_argument("--CLEAR-HTTP", "-aC", dest="ClearHttpPorts", default=False, action="store_true", \
+                    help="Clear any custom HTTP ports and revert to default of 80.")
+parser.add_argument("--ADD-HTTPS-PORT", "-b", dest="HttpsPortToAdd", default=None, help="Add a custom HTTPS port.")
+parser.add_argument("--CLEAR-HTTPS", "-bC", dest="ClearHttpsPorts", default=False, action="store_true", \
+                    help="Clear any custom HTTPS ports and revert to default of 443.")
+parser.add_argument("--ADD-CUSTOM-FINGERPRINT", "-c", dest="Fingerprint", default=None, \
+                    help="Add a custom fingerprint in the form <Name>,<RegEx>.")
+parser.add_argument("--DELETE-CUSTOM-FINGERPRINT", "-cD", dest="FingerprintNameToDelete", default=None, \
+                    help="Delete a custom fingerprint by name.")
+parser.add_argument("--IMPORT-CUSTOM-FINGERPRINT", "-cI", dest="ImportFingerprintFile", default=None, \
+                    help="Import a custom fingerprint file with the path specified.")
+parser.add_argument("--CLEAR-CUSTOM-FINGERPRINTS", "-cC", dest="ClearFingerprints", default=False, action="store_true", \
+                    help="Clears all custom fingerprints stored in DB.")
+parser.add_argument("--SHOW-CONFIG", "-g", dest="ShowConfigBrief", default=False, action="store_true", \
+                    help="Show current WebStor configuration (brief).")
+parser.add_argument("--SHOW-CONFIG-FULL", "-gF", dest="ShowConfigFull", default=False, action="store_true", \
+                    help="Show current WebStor configuration (full).")
+parser.add_argument("--RUN-MASSCAN", "-m", dest='ForceScan', default=False, action='store_true', \
+                    help="Runs a new port scan with Masscan on all configured TCP ports for HTTP and HTTPS, " \
+                    "against all configured ranges and any IP addresses from DNS records that are outside those ranges.")
+parser.add_argument("--SET-MASSCAN-RANGES", "-mR", dest="SetScanRanges", default=None, \
+                    help="Scan range or ranges, replaces existing ranges in DB, comma " \
+                    "separated, such as: -s 10.10.0.0/16,10.13.0.0/16,192.168.1.0/24")
+parser.add_argument("--IMPORT-MASSCAN-RANGES", "-mI", dest="ImportScanRanges", default=None, \
+                    help="Import scan ranges (CIDR blocks) from a specified file.")
+parser.add_argument("--DELETE-RANGE", "-mD", dest="RangeToDelete", default=None, help="Delete scan range.")
+parser.add_argument("--ADD-PATH", "-p", dest="PathToAdd", default=None, help="Add paths for which to request " \
+                    "and store responses besides '/'.")
+parser.add_argument("--DELETE-PATH", "-pD", dest="PathToDelete", default=None, help="Delete paths for which to " \
+                    "request and store responses besides '/'.")
+parser.add_argument("--CLEAR-PATHS", "-pC", dest="ClearPaths", default=False, action="store_true", \
+                    help="Clear any custom URL request paths and revert to default of '/'.")
+parser.add_argument("--REFRESH-RESPONSES", "-r", dest="RefreshResponses", default=False, action="store_true", \
+                    help="Refresh URL responses in DB.")
+parser.add_argument("--SEARCH-PATTERN", "-sP", dest="SearchPattern", default=None, \
+                    help="Search for string or regular expression in WebStor database.")
+parser.add_argument("--SEARCH-CUSTOM-FINGERPRINT", "-sC", dest="SearchFingerprint", default=None, \
+                    help="Search for technology by name of user-provided custom fingerprint.")
+parser.add_argument("--SEARCH-WAPPALYZER", "-sW", dest="SearchWappalyzer", default=None, \
+                    help="Search for technology by name (from Wappalyzer Tech DB) in WebStor DB.")
+parser.add_argument("--NO-TSIG-KEY", "-tN", dest="UseTSIG", default=True, action="store_false", \
+                    help="Do not use DNSSec TSIG key stored in database or a file, even if present.")
+parser.add_argument("--TSIG-KEY-IMPORT", "-tI", dest="ImportTSIGFile", default=None, \
+                    help="Import a specified TSIG key file into the database")
+parser.add_argument("--TSIG-KEY-REPLACE", "-tR", dest="ReplacementTSIGFile", default=None, \
+                    help="Replace a TSIG key in the database with a specified file")
+parser.add_argument("--DELETE-TSIG", "-dT", dest="TSIGToDelete", default=None, \
+                    help="Delete a TSIG key from the database by name.")
+parser.add_argument("--USE-TSIG-FILE-ONLY", "-tF", dest="UseTSIGFileOnly", default=None, \
+                    help="Only use tsig file specified (full path), do not use TSIGs stored in the DB. " \
+                    "Applies to all domains, limiting WebStor to one TSIG for zone transfers in the current execution.")
+parser.add_argument("--DOWNLOAD-NEW-WAPPALYZER", '-w', dest="DLWap", default=False, action="store_true", \
+                    help="Download a new Wappalyzer fingerprints file directly from GitHub. Overwrites existing " \
+                    "Wappalyzer fingerprint data.")
+parser.add_argument("--LIST-WAPPALYZER-TECH-NAMES", "-wL", dest="ListWappalyzer", default=False, action="store_true", \
+                    help="List the names of all Wappalyzer technologies in the database.")
+parser.add_argument("--ZONE-XFER", "-z", dest='PerformZoneXfer', default=False, action='store_true', \
+                    help="Forces a new zone transfer using all domains, servers, and associated TSIG keys in DB")
+parser.add_argument("--ADD-DOMAIN", "-zA", dest="DomainDetails", default=None, \
+                    help="Add a domain in the form <Domain name>,<Server>,<TSIG Key Name>.")
+parser.add_argument("--DELETE-DOMAIN", "-zD", dest="DomainToDelete", default=None, \
+                    help="Delete a DNS domain from the database by name.")
+parser.add_argument("--IMPORT-ZONE-FILE", "-zI", dest="ImportZoneFile", default=None, \
+                    help="Add domains for zone transfers from a file.")
+parser.add_argument("--CLEAR-DOMAINS", "-zC", dest="ClearDomains", default=False, action="store_true", \
+                    help="Clears all DNS domains stored in DB.")
+parser.add_argument("--LIST-DOMAINS", "-zL", dest="ListDomains", default=False, action="store_true", \
+                    help="Lists all DNS domains stored in DB.")
+parser.add_argument("--SQL-CREDS", "-q", dest="SQLCredsFile", default=None, \
+                    help="Use SQL credentials in file at specified path.")
+
+args = parser.parse_args()
+
 sMySQLhost="localhost"
 sMySQLuser="root"
 sMySQLpw=""
 
-if os.path.exists('./ws-sql.txt'):
-    try:
-        MySQLcredFile = open('./ws-sql.txt', 'r')
-        lMySQLlines = MySQLcredFile.readlines()
-        sMySQLhost = lMySQLlines[0].rstrip()
-        sMySQLuser = lMySQLlines[1].rstrip()
-        sMySQLpw = lMySQLlines[2].rstrip()
-        mysqlconn = mysql.connector.connect(host=sMySQLhost, user=sMySQLuser, password=sMySQLpw)
-    except Exception as e:
-        print("Error reading MySQL credential file or connecting to database. Falling back to default credentials." \
-              " Error was: %s\n" % e)
-        sMySQLhost="localhost"
-        sMySQLuser="root"
-        sMySQLpw=""
+if args.SQLCredsFile != None:
+    if os.path.exists(args.SQLCredsFile):
         try:
+            MySQLcredFile = open(args.SQLCredsFile, 'r')
+            lMySQLlines = MySQLcredFile.readlines()
+            sMySQLhost = lMySQLlines[0].rstrip()
+            sMySQLuser = lMySQLlines[1].rstrip()
+            sMySQLpw = lMySQLlines[2].rstrip()
             mysqlconn = mysql.connector.connect(host=sMySQLhost, user=sMySQLuser, password=sMySQLpw)
         except Exception as e:
-            print("Failed after falling back to default credentials. Exiting. Error was: %s\n\n" \
-                   % e)
-            exit(1)
+            print("Error reading MySQL credential file or connecting to database. Falling back to default credentials." \
+                  " Error was: %s\n" % e)
+            sMySQLhost="localhost"
+            sMySQLuser="root"
+            sMySQLpw=""
+            try:
+                mysqlconn = mysql.connector.connect(host=sMySQLhost, user=sMySQLuser, password=sMySQLpw)
+            except Exception as e:
+                print("Failed after falling back to default credentials. Exiting. Error was: %s\n\n" \
+                      % e)
+                exit(1)
+    else:
+        print("Specified MySQL credential file does not exist. Exiting.")
+        exit(1)
+    
 else:
     try:
         mysqlconn = mysql.connector.connect(host=sMySQLhost, user=sMySQLuser, password=sMySQLpw)
@@ -105,7 +185,7 @@ else:
         print("Failed connecting with MySQL default credentials. Exiting. Error was: %s\n\n" \
               "Do you have MariaDB 10.0.5 or newer installed?" % e)
         exit(1)
-
+    
 cursor = mysqlconn.cursor()
 
 
@@ -1164,7 +1244,7 @@ def find_list_resources(tag, attribute, soup):
     return list
 
 
-def dns_zone_xfer(bUseFileOnly):
+def dns_zone_xfer(sTSIGfile):
     print("Attempting zone transfer for domains in database.")
     sZoneXfersQuery = "SELECT domains.domain as zone, domains.server as server, domains.keyname as keyname, " \
                       "tsig.algorithm as algorithm, tsig.secret FROM domains INNER JOIN tsig ON domains.keyname = tsig.name"
@@ -1201,14 +1281,14 @@ def dns_zone_xfer(bUseFileOnly):
     for tZoneInfo in lZoneInfo:
         sZone = tZoneInfo[0]
         sServer = tZoneInfo[1]
-        if bUseFileOnly == False:
+        if sTSIGfile == None:
             sKeyName = tZoneInfo[2]
             sAlgorithm = tZoneInfo[3]
             sSecret = tZoneInfo[4]
         else:
             #If the file-based tsig has been specified, take the values out of the file.
             try:
-                TSIGFile = open('./ws-key.tsig', 'r')
+                TSIGFile = open(sTSIGfile, 'r')
                 aTSIGLines = TSIGFile.readlines()
             except Exception as e:
                 print("Error opening TSIG file %s: %s" % (sZone, e))
@@ -1386,82 +1466,10 @@ def is_valid_hostname(hostname):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--ADD-HTTP-PORT", "-a", dest="HttpPortToAdd", default=None, help="Add a custom HTTP port.")
-    parser.add_argument("--CLEAR-HTTP", "-aC", dest="ClearHttpPorts", default=False, action="store_true", \
-                        help="Clear any custom HTTP ports and revert to default of 80.")
-    parser.add_argument("--ADD-HTTPS-PORT", "-b", dest="HttpsPortToAdd", default=None, help="Add a custom HTTPS port.")
-    parser.add_argument("--CLEAR-HTTPS", "-bC", dest="ClearHttpsPorts", default=False, action="store_true", \
-                        help="Clear any custom HTTPS ports and revert to default of 443.")
-    parser.add_argument("--ADD-CUSTOM-FINGERPRINT", "-c", dest="Fingerprint", default=None, \
-                        help="Add a custom fingerprint in the form <Name>,<RegEx>.")
-    parser.add_argument("--DELETE-CUSTOM-FINGERPRINT", "-cD", dest="FingerprintNameToDelete", default=None, \
-                        help="Delete a custom fingerprint by name.")
-    parser.add_argument("--IMPORT-CUSTOM-FINGERPRINT", "-cI", dest="ImportFingerprintFile", default=None, \
-                        help="Import a custom fingerprint file with the path specified.")
-    parser.add_argument("--CLEAR-CUSTOM-FINGERPRINTS", "-cC", dest="ClearFingerprints", default=False, action="store_true", \
-                        help="Clears all custom fingerprints stored in DB.")
-    parser.add_argument("--SHOW-CONFIG", "-g", dest="ShowConfigBrief", default=False, action="store_true", \
-                        help="Show current WebStor configuration (brief).")
-    parser.add_argument("--SHOW-CONFIG-FULL", "-gF", dest="ShowConfigFull", default=False, action="store_true", \
-                        help="Show current WebStor configuration (full).")
-    parser.add_argument("--RUN-MASSCAN", "-m", dest='ForceScan', default=False, action='store_true', \
-                        help="Runs a new port scan with Masscan on all configured TCP ports for HTTP and HTTPS, " \
-                        "against all configured ranges and any IP addresses from DNS records that are outside those ranges.")
-    parser.add_argument("--SET-MASSCAN-RANGES", "-mR", dest="SetScanRanges", default=None, \
-                        help="Scan range or ranges, replaces existing ranges in DB, comma " \
-                        "separated, such as: -s 10.10.0.0/16,10.13.0.0/16,192.168.1.0/24")
-    parser.add_argument("--IMPORT-MASSCAN-RANGES", "-mI", dest="ImportScanRanges", default=None, \
-                        help="Import scan ranges (CIDR blocks) from a specified file.")
-    parser.add_argument("--DELETE-RANGE", "-mD", dest="RangeToDelete", default=None, help="Delete scan range.")
-    parser.add_argument("--IMPORT-ZONE-FILE", "-zI", dest="ImportZoneFile", default=None, \
-                        help="Add domains for zone transfers from a file.")
-    parser.add_argument("--ADD-PATH", "-p", dest="PathToAdd", default=None, help="Add paths for which to request " \
-                        "and store responses besides '/'.")
-    parser.add_argument("--DELETE-PATH", "-pD", dest="PathToDelete", default=None, help="Delete paths for which to " \
-                        "request and store responses besides '/'.")
-    parser.add_argument("--CLEAR-PATHS", "-pC", dest="ClearPaths", default=False, action="store_true", \
-                        help="Clear any custom URL request paths and revert to default of '/'.")
-    parser.add_argument("--REFRESH-RESPONSES", "-r", dest="RefreshResponses", default=False, action="store_true", \
-                        help="Refresh URL responses in DB.")
-    parser.add_argument("--SEARCH-PATTERN", "-sP", dest="SearchPattern", default=None, \
-                        help="Search for string or regular expression in WebStor database.")
-    parser.add_argument("--SEARCH-CUSTOM-FINGERPRINT", "-sC", dest="SearchFingerprint", default=None, \
-                        help="Search for technology by name of user-provided custom fingerprint.")
-    parser.add_argument("--SEARCH-WAPPALYZER", "-sW", dest="SearchWappalyzer", default=None, \
-                        help="Search for technology by name (from Wappalyzer Tech DB) in WebStor DB.")
-    parser.add_argument("--NO-TSIG-KEY", "-tN", dest="UseTSIG", default=True, action="store_false", \
-                        help="Do not use DNSSec TSIG key stored in database or a file, even if present.")
-    parser.add_argument("--TSIG-KEY-IMPORT", "-tI", dest="ImportTSIGFile", default=None, \
-                        help="Import a specified TSIG key file into the database")
-    parser.add_argument("--TSIG-KEY-REPLACE", "-tR", dest="ReplacementTSIGFile", default=None, \
-                        help="Replace a TSIG key in the database with a specified file")
-    parser.add_argument("--DELETE-TSIG", "-dT", dest="TSIGToDelete", default=None, \
-                        help="Delete a TSIG key from the database by name.")
-    parser.add_argument("--USE-TSIG-FILE-ONLY", "-tF", dest="UseTSIGFileOnly", default=False, action='store_true', \
-                        help="Only use tsig file 'webstor.tsig' in present directory, do not use TSIGs stored in the DB. " \
-                        "Applies to all domains, limiting WebStor to one TSIG for zone transfers in the current execution.")
-    parser.add_argument("--DOWNLOAD-NEW-WAPPALYZER", '-w', dest="DLWap", default=False, action="store_true", \
-                        help="Download a new Wappalyzer fingerprints file directly from GitHub. Overwrites existing " \
-                        "Wappalyzer fingerprint data.")
-    parser.add_argument("--LIST-WAPPALYZER-TECH-NAMES", "-wL", dest="ListWappalyzer", default=False, action="store_true", \
-                        help="List the names of all Wappalyzer technologies in the database.")
-    parser.add_argument("--ZONE-XFER", "-z", dest='PerformZoneXfer', default=False, action='store_true', \
-                        help="Forces a new zone transfer using all domains, servers, and associated TSIG keys in DB")
-    parser.add_argument("--ADD-DOMAIN", "-zA", dest="DomainDetails", default=None, \
-                        help="Add a domain in the form <Domain name>,<Server>,<TSIG Key Name>.")
-    parser.add_argument("--DELETE-DOMAIN", "-zD", dest="DomainToDelete", default=None, \
-                        help="Delete a DNS domain from the database by name.")
-    parser.add_argument("--CLEAR-DOMAINS", "-zC", dest="ClearDomains", default=False, action="store_true", \
-                        help="Clears all DNS domains stored in DB.")
-    parser.add_argument("--LIST-DOMAINS", "-zL", dest="ListDomains", default=False, action="store_true", \
-                        help="Lists all DNS domains stored in DB.")
 
     if len(sys.argv)==1:
         parser.print_help(sys.stderr)
         sys.exit(1)
-
-    args = parser.parse_args()
 
     create_database()
         
@@ -1530,8 +1538,8 @@ def main():
     if args.SearchWappalyzer != None:
         search_wappalyzer(args.SearchWappalyzer)    
 
-
 start_time = time.time()
+
 
 if __name__ == '__main__':
     main()

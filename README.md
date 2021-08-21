@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="img/webstor.png" width="75%">
+    <img src="img/webstor.png" width="100%">
 </p>
 
 WebStor
@@ -88,7 +88,7 @@ future.
                   [--ZONE-XFER] [--ADD-DOMAIN DOMAINDETAILS]
                   [--DELETE-DOMAIN DOMAINTODELETE]
                   [--IMPORT-ZONE-FILE IMPORTZONEFILE] [--CLEAR-DOMAINS]
-                  [--LIST-DOMAINS] [--SQL-CREDS SQLCREDSFILE]
+                  [--LIST-DOMAINS] [--LIST-OUTSIDE] [--SQL-CREDS SQLCREDSFILE]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -176,6 +176,8 @@ optional arguments:
                         Add domains for zone transfers from a file.
   --CLEAR-DOMAINS, -zC  Clears all DNS domains stored in DB.
   --LIST-DOMAINS, -zL   Lists all DNS domains stored in DB.
+  --LIST-OUTSIDE, -e    Prints a list of all names and IPs from our zone
+                        transfers that are outside defined net ranges.
   --SQL-CREDS SQLCREDSFILE, -q SQLCREDSFILE
                         Use SQL credentials in file at specified path.
 ~~~

@@ -144,6 +144,8 @@ parser.add_argument("--CLEAR-DOMAINS", "-zC", dest="ClearDomains", default=False
                     help="Clears all DNS domains stored in DB.")
 parser.add_argument("--LIST-DOMAINS", "-zL", dest="ListDomains", default=False, action="store_true", \
                     help="Lists all DNS domains stored in DB.")
+parser.add_argument("--LIST-OUTSIDE", "-e", dest="ListOutside", default=False, action="store_true", \
+                    help="Prints a list of all names and IPs from our zone transfers that are outside defined net ranges.")
 parser.add_argument("--SQL-CREDS", "-q", dest="SQLCredsFile", default=None, \
                     help="Use SQL credentials in file at specified path.")
 
@@ -1456,6 +1458,65 @@ def is_valid_ipv4(s):
         return False
 
 
+def ListOutsideNamesAndIPs():
+    lIntRanges = [] #Will be used to store tuples of int representations of net and mask for each range, better performance
+    lExtraAddresses = []
+    lAddrAndNamesToPrint = []
+
+    #Get names and IPs that came up in our zone transfer that are outside the ranges
+    sSQL_SelectDistinctIP = "SELECT distinct ip from dns_hosts"
+    sSQL_SelectNameAndIP  = "SELECT fqdn,ip from dns_hosts"
+
+    try:
+        cursor.execute(sSQL_SelectDistinctIP)
+        lIPs = cursor.fetchall()
+        cursor.execute(sSQL_SelectNameAndIP)
+        lAllDNS = cursor.fetchall()
+    except Exception as e:
+        print("Exception encountered while retrieving DNS hosts from database: %s", e)
+        return
+    sSQL_SelectRanges = "SELECT cidr from target_ranges"
+    try:
+        cursor.execute(sSQL_SelectRanges)
+        lRanges = cursor.fetchall()
+    except Exception as e:
+        print("Exception encountered while retrieving CIDR ranges from database: %s", e)
+        return
+    lTargetRanges = [] #Clean,just string,no tuple
+    for tCIDRblock in lRanges:
+        lTargetRanges.append(tCIDRblock[0])
+        ip_net = ipaddress.ip_network(tCIDRblock[0])
+        iNetw = int(ip_net.network_address)
+        iMask = int(ip_net.netmask)
+        lIntRanges.append((iNetw,iMask))
+
+    for address in lIPs:
+        iAddress = int(ipaddress.ip_address(address[0]))
+        bInRange = False
+        for tIntRange in lIntRanges:
+            bInRange = (iAddress & tIntRange[1]) == tIntRange[0]
+            if bInRange == True:
+                break
+        if bInRange == False:
+            lExtraAddresses.append(address[0])
+    lExtraAddresses = list(set(lExtraAddresses)) #Only Unique
+
+    #Now take our list against every row in the dns_hosts table.  Print [name],[IP] when the IP matches
+    dAllDNS = {}
+    for NameAndIP in lAllDNS:
+        if NameAndIP[0] not in dAllDNS: 
+            dAllDNS[NameAndIP[1]] = NameAndIP[0]
+        else:
+            dAllDNS[NameAndIP[1]].append(NameAndIP[0])
+    for sIP in lExtraAddresses:
+        if sIP in dAllDNS:
+            lAddrAndNamesToPrint.append("%s,%s" % (sIP,dAllDNS[sIP]))
+    lAddrAndNamesToPrint.sort()
+    for sAddrAndName in lAddrAndNamesToPrint:
+        print(sAddrAndName)
+    return
+
+
 def is_valid_hostname(hostname):
     if len(hostname) > 255:
         return False
@@ -1537,6 +1598,8 @@ def main():
         search_fingerprint(args.SearchFingerprint)    
     if args.SearchWappalyzer != None:
         search_wappalyzer(args.SearchWappalyzer)    
+    if args.ListOutside != False:
+        ListOutsideNamesAndIPs()    
 
 start_time = time.time()
 

@@ -1,3 +1,7 @@
+<p align="center">
+    <img src="img/webstor.png" width="75%">
+</p>
+
 WebStor
 =======
 
@@ -41,9 +45,9 @@ future.
       critical that you configure sudo nopasswd for any user executing Masscan
       scanning via WebStor.**
   * MariaDB 10.0.5 or later
-    - The default credentials used by webstor will be root and a blank password.
+    - The default credentials tried by WebStor will be root and a blank password.
       See the "Secure options" section for configuring WebStor to use other
-      usernames and passwords.
+      usernames and passwords to connect to the database.
 
 ### Python libraries
   * pip3 install dnspython
@@ -217,12 +221,6 @@ optional arguments:
 
 ## Example usage
 ~~~
-# Using WebStor to search for Wordpress sites via Wappalyzer definitions:
-./webstor.py -sW wordpress
-# A list of reachable Wordpress sites on your organization's networks will be 
-# returned. NOTE: Wappalyzer searches may be slower than pattern/regex searches
-# due to the number of properties being queried to verify.
-
 # Search for a string/regex associated with a web technology:
 ./webstor.py -sP "content=\"wordpress 4.[7-9]"
 # A list of sites with this regex, expected responses from Wordpress v4.7-9 sites,
@@ -234,6 +232,12 @@ optional arguments:
 
 # After the above command has been run, the query may be performed simply with:
 ./webstor.py -sC wordpress4.7-9
+
+# Using WebStor to search for Wordpress sites via Wappalyzer definitions:
+./webstor.py -sW wordpress
+# A list of reachable Wordpress sites on your organization's networks will be 
+# returned. NOTE: Wappalyzer searches may be slower than pattern/regex searches
+# due to the number of properties being queried to verify.
 ~~~
 
 

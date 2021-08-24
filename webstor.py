@@ -99,9 +99,10 @@ parser.add_argument("--RUN-MASSCAN", "-m", dest='ForceScan', default=False, acti
 parser.add_argument("--SET-MASSCAN-RANGES", "-mR", dest="SetScanRanges", default=None, \
                     help="Scan range or ranges, replaces existing ranges in DB, comma " \
                     "separated, such as: -s 10.10.0.0/16,10.13.0.0/16,192.168.1.0/24")
+parser.add_argument("--ADD-RANGE", "-mA", dest="RangeToAdd", default=None, help="Add scan range.")
+parser.add_argument("--DELETE-RANGE", "-mD", dest="RangeToDelete", default=None, help="Delete scan range.")
 parser.add_argument("--IMPORT-MASSCAN-RANGES", "-mI", dest="ImportScanRanges", default=None, \
                     help="Import scan ranges (CIDR blocks) from a specified file.")
-parser.add_argument("--DELETE-RANGE", "-mD", dest="RangeToDelete", default=None, help="Delete scan range.")
 parser.add_argument("--ADD-PATH", "-p", dest="PathToAdd", default=None, help="Add paths for which to request " \
                     "and store responses besides '/'.")
 parser.add_argument("--DELETE-PATH", "-pD", dest="PathToDelete", default=None, help="Delete paths for which to " \
@@ -845,6 +846,22 @@ def import_scan_ranges(sFileName):
     return
 
 
+def add_scan_range(sRangeToAdd):
+    print("Attempting to add scan range: %s" % sRangeToAdd)
+    sInsertRange = """INSERT IGNORE INTO target_ranges (cidr) VALUES (%s)"""
+    lCIDRblock = sRangeToAdd.split('/')
+    if (len(lCIDRblock) == 2) and (is_valid_ipv4(lCIDRblock[0])) and (int(lCIDRblock[1])>7 and int(lCIDRblock[1])<33):
+        try:
+            cursor.execute(sInsertRange, (sRangeToAdd.rstrip(),)) 
+            mysqlconn.commit()
+            print("Successfully added scan range into database.")
+        except Exception as e:
+            print("Error inserting scan ranges into database: %s", e)
+    else:
+        print("Not adding invalid CIDR block: %s" % sRangeToAdd )
+    return
+
+
 def delete_scan_range(sRangeToRemove):
     print("Attempting to delete scan range: %s" % sRangeToRemove)
     sql_delete_range = """DELETE FROM target_ranges WHERE cidr = %s""" 
@@ -1568,6 +1585,8 @@ def main():
         set_scan_ranges(args.SetScanRanges)
     if args.ImportScanRanges != None:
         import_scan_ranges(args.ImportScanRanges)        
+    if args.RangeToAdd != None:
+        add_scan_range(args.RangeToAdd)
     if args.DLWap != False:
         download_wappalyzer()
     if args.ListWappalyzer != False:

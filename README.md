@@ -1,6 +1,6 @@
 <p align="center">
-    <img src="img/webstor.png" width="100%">
-</p>
+    <img src="img/webstor.png" width="95%">
+</p><p>&nbsp;</p>
 
 WebStor
 =======

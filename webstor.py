@@ -1045,20 +1045,30 @@ def add_domain(sDomainToAdd):
 
 def download_wappalyzer():
     print("Downloading Wappalyzer Fingerprints from GitHub Repo.")
-    sWappalyzerResponse = ""
-    try:
-        r = requests.get("https://raw.githubusercontent.com/AliasIO/wappalyzer/master/src/technologies.json", \
-                         timeout=5)
-        sWappalyzerResponse = str(r.text)
-    except:
-        print("Wappalyzer technologies json file not available.")
 
+    tech_folder = requests.get("https://api.github.com/repos/AliasIO/wappalyzer/contents/src/technologies?ref=master",
+                  timeout=5).json()
+    dTechnologies = dict()
+    for tech_file_ref1 in tech_folder:
+        tech_file = None
+        if tech_file_ref1['name'].endswith('.json'):
+            try:
+                tech_file_ref2 = requests.get(tech_file_ref1['url'],
+                                 timeout=5).json()
+                download_url = tech_file_ref2['download_url']
+                tech_file = requests.get(download_url).json()
+            except:
+                print("Wappalyzer technologies json file not available.")
+            if tech_file:
+                for name, details in tech_file.items():
+                    dTechnologies[name] = details
+    # print(dTechnologies.keys())
     try:
         cursor.execute("DROP TABLE IF EXISTS wapp_technologies")
         cursor.execute("CREATE TABLE IF NOT EXISTS wapp_technologies (name VARCHAR(80), details VARCHAR(4096), " \
                        "PRIMARY KEY (name))")
-        dWappalyzer = json.loads(sWappalyzerResponse) 
-        dTechnologies = dWappalyzer.get('technologies')
+        # dWappalyzer = json.loads(sWappalyzerResponse) 
+        # dTechnologies = dWappalyzer.get('technologies')
         sInsertWappTech = """INSERT IGNORE INTO wapp_technologies (name, details) VALUES (%s,%s)""" 
         for sName in dTechnologies:
             cursor.execute(sInsertWappTech, (sName.rstrip(),str(dTechnologies.get(sName)).rstrip()) ) 

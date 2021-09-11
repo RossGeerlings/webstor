@@ -892,14 +892,14 @@ def import_tsig(sFileName):
         aTSIGLines = TSIGFile.readlines()
         for aTSIGLine in aTSIGLines:
             if aTSIGLine.startswith("key"):
-                sKey = aTSIGLines[0].split()[1]
+                sKey = aTSIGLine.split()[1]
                 print(sKey)
             elif aTSIGLine.lstrip().startswith("algorithm"):
                 sAlgorithm = aTSIGLine.split('"')[1]
                 print(sAlgorithm)
             elif aTSIGLine.lstrip().startswith("secret"):
                 sSecret = aTSIGLine.split('"')[1]
-                print(sSecret)
+                print("*****")
     except Exception as e:
         print(f"Error importing TSIG from file: {e}")
         return

@@ -890,26 +890,22 @@ def import_tsig(sFileName):
     try:
         TSIGFile = open(sFileName, 'r') 
         aTSIGLines = TSIGFile.readlines()
-        if aTSIGLines[0].startswith("key"):
-            sKey = aTSIGLines[0].split()[1]
-            print(sKey)
-        else:
-            print("Invalid key name in TSIG file")
-            return
-        if aTSIGLines[1].find("algorithm"):
-            sAlgorithm = aTSIGLines[1].split('"')[1]
-            print(sAlgorithm)
-        else:
-            print("Invalid algorithm in TSIG file")
-            return
-        if aTSIGLines[2].find("secret"):
-            sSecret = aTSIGLines[2].split('"')[1]
-            print(sSecret)
-        else:
-            print("Invalid secret in TSIG file")
-            return
+        for aTSIGLine in aTSIGLines:
+            if aTSIGLine.startswith("key"):
+                sKey = aTSIGLines[0].split()[1]
+                print(sKey)
+            elif aTSIGLine.lstrip().startswith("algorithm"):
+                sAlgorithm = aTSIGLine.split('"')[1]
+                print(sAlgorithm)
+            elif aTSIGLine.lstrip().startswith("secret"):
+                sSecret = aTSIGLine.split('"')[1]
+                print(sSecret)
     except Exception as e:
-        print("Error importing TSIG from file: %s", e)
+        print(f"Error importing TSIG from file: {e}")
+        return
+
+    if not (sKey and sAlgorithm and sSecret):
+        print("TSIG key information missing")
         return
 
     sInsertTsig = """INSERT INTO tsig (name, algorithm, secret) VALUES (%s,%s,%s)""" 
@@ -1252,7 +1248,7 @@ def url_request(tTarget):
         try:
             timeout = Timeout(8)
             timeout.start()
-            r = requests.get(sURL,  verify=False, timeout=3)
+            r = requests.get(sURL, verify=False, timeout=6)
         except Timeout as T:
             print("***Python requests.get() hung for URL %s." % sURL)
             return

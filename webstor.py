@@ -1046,19 +1046,34 @@ def add_domain(sDomainToAdd):
 def download_wappalyzer():
     print("Downloading Wappalyzer Fingerprints from GitHub Repo.")
     sWappalyzerResponse = ""
-    try:
-        r = requests.get("https://raw.githubusercontent.com/AliasIO/wappalyzer/master/src/technologies.json", \
-                         timeout=5)
-        sWappalyzerResponse = str(r.text)
-    except:
-        print("Wappalyzer technologies json file not available.")
 
+    #Wappalyzer has divided the former technologies.json into many files in a technologies dir.  
+    #We'll take all json files from it.
+    try:
+        rTechFolder = requests.get("https://api.github.com/repos/AliasIO/wappalyzer/contents/src/technologies?ref=master", \
+                      timeout=5).json()
+    except:
+        print("Wappalyzer technologies directory does not appear to be available.")
+        return
+
+    dTechnologies = dict()
+    #Loop through each of the Wappalyzer technologies files.
+    for TechFileRef in rTechFolder:
+        rTechFile = None
+        if TechFileRef['name'].endswith('.json'):
+            try:
+                TechFileRef2 = requests.get(TechFileRef['url'], timeout=5).json()
+                sTechFileURL = TechFileRef2['download_url']
+                rTechFile = requests.get(sTechFileURL).json() 
+            except:
+                print("Wappalyzer technologies json file %s seen in directory not available." % TechFileRef['url'])
+            if rTechFile:
+                for name, details in rTechFile.items():
+                    dTechnologies[name] = details
     try:
         cursor.execute("DROP TABLE IF EXISTS wapp_technologies")
         cursor.execute("CREATE TABLE IF NOT EXISTS wapp_technologies (name VARCHAR(80), details VARCHAR(4096), " \
                        "PRIMARY KEY (name))")
-        dWappalyzer = json.loads(sWappalyzerResponse) 
-        dTechnologies = dWappalyzer.get('technologies')
         sInsertWappTech = """INSERT IGNORE INTO wapp_technologies (name, details) VALUES (%s,%s)""" 
         for sName in dTechnologies:
             cursor.execute(sInsertWappTech, (sName.rstrip(),str(dTechnologies.get(sName)).rstrip()) ) 

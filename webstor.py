@@ -1061,7 +1061,7 @@ def download_wappalyzer():
                 print("Wappalyzer technologies json file not available.")
             if tech_file:
                 for name, details in tech_file.items():
-                    dTechnologies[name] = details
+                    dTechnologies[name.rstrip()] = details
     # print(dTechnologies.keys())
     try:
         cursor.execute("DROP TABLE IF EXISTS wapp_technologies")
@@ -1071,7 +1071,8 @@ def download_wappalyzer():
         # dTechnologies = dWappalyzer.get('technologies')
         sInsertWappTech = """INSERT IGNORE INTO wapp_technologies (name, details) VALUES (%s,%s)""" 
         for sName in dTechnologies:
-            cursor.execute(sInsertWappTech, (sName.rstrip(),str(dTechnologies.get(sName)).rstrip()) ) 
+            params = (sName, json.dumps(dTechnologies.get(sName)))
+            cursor.execute(sInsertWappTech, params=params) 
         mysqlconn.commit()
     except Exception as e:
         print("Error inserting Wappalyzer data: %s" % e)
@@ -1145,30 +1146,33 @@ def search_fingerprint(sFingerprintName):
 def search_wappalyzer(sSearchName):
     TupleToRegexCheck = ()
     ListToRegexCheck = []
-
-    sSQL_Search_Technologies = "SELECT details FROM wapp_technologies WHERE name like %s"
+    Technologies_records = None
+    # sSQL_Search_Technologies = "SELECT details FROM wapp_technologies WHERE name LIKE %s"
+    sSQL_Search_Technologies = "SELECT details FROM wapp_technologies WHERE name = %s"
+    params = (sSearchName,)
     try:
-        cursor.execute(sSQL_Search_Technologies, ("%"+sSearchName+'%',) )
-        Technologies_records = cursor.fetchall()
+        cursor.execute(sSQL_Search_Technologies, params=params)
+        Technologies_record = cursor.fetchone()
     except Exception as e:
-        print("Error searching Wappalyzer tachnologies: %s" % e)
+        print(f"Error searching Wappalyzer technologies: {e}")
         return
-    if len(Technologies_records) > 0:
-        p = re.compile('(?<!\\\\)\'')
-        sWappalyzerTech = Technologies_records[0][0].replace("\"", "\\\"")
-        sWappalyzerTech = sWappalyzerTech.replace("\\'","\\\\'")
-        sWappalyzerTech = p.sub('\"', sWappalyzerTech)
-        sWappalyzerTech = re.sub(r'":\ (True|False),', '": "",', sWappalyzerTech)
-        dWappalyzerTech = json.loads(sWappalyzerTech)
+    if Technologies_record:
+        dWappalyzerTech = json.loads(Technologies_record[0])
 
         #For meta in wappalyzer technologies, they are regex but we have to format each one we get.
-        #We'll do that and add directly to the tuple now. 
+        #We'll do that and add directly to the tuple now.
         if "meta" in dWappalyzerTech.keys():
             if isinstance(dWappalyzerTech.get("meta"), dict):
                 for key in dWappalyzerTech["meta"]:
-                    if ";confidence:" not in dWappalyzerTech["meta"][key]:
-                        ListToRegexCheck.append("<meta name=[\"\']%s[\"\'] content=[\"\']%s" % (key, \
-                                                dWappalyzerTech["meta"][key].strip('^').strip('$')))
+                    values = list()
+                    if isinstance(dWappalyzerTech["meta"][key], str):
+                        values.append(dWappalyzerTech["meta"][key])
+                    else:
+                        values.extend(dWappalyzerTech["meta"][key])
+                    for value in values:
+                        if ";confidence:" not in value:
+                            ListToRegexCheck.append("<meta name=[\"\']%s[\"\'] content=[\"\']%s" % (key, \
+                                                value.strip('^').strip('$')))
         if "html" in dWappalyzerTech.keys():
             if isinstance(dWappalyzerTech.get("html"), str):
                 if ";confidence:" not in dWappalyzerTech.get("html"):

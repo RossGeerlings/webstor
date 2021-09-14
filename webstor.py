@@ -9,6 +9,7 @@
 # Brandon Bailey <Twitter: @ge0stigm4> (Co-designer of original concept) 
 # Bob Harold (Guidance on DNS)
 # Neamen Negash <nnegash at umich.edu> (Installer)
+# afreudenreich (Multiple bug fixes and enhancements)
 #
 # WebStor uses Wappalyzer's technologies database for pre-populated, name- 
 # indexed technology lookups against WebStor's stored responses.  Wappalyzer
@@ -1041,30 +1042,35 @@ def add_domain(sDomainToAdd):
 
 def download_wappalyzer():
     print("Downloading Wappalyzer Fingerprints from GitHub Repo.")
+    sWappalyzerResponse = ""
 
-    tech_folder = requests.get("https://api.github.com/repos/AliasIO/wappalyzer/contents/src/technologies?ref=master",
-                  timeout=5).json()
+    #Wappalyzer has divided the former technologies.json into many files in a technologies dir.  
+    #We'll take all json files from it.
+    try:
+        rTechFolder = requests.get("https://api.github.com/repos/AliasIO/wappalyzer/contents/src/technologies?ref=master", \
+                      timeout=5).json()
+    except:
+        print("Wappalyzer technologies directory does not appear to be available.")
+        return
+
     dTechnologies = dict()
-    for tech_file_ref1 in tech_folder:
-        tech_file = None
-        if tech_file_ref1['name'].endswith('.json'):
+    #Loop through each of the Wappalyzer technologies files.
+    for TechFileRef in rTechFolder:
+        rTechFile = None
+        if TechFileRef['name'].endswith('.json'):
             try:
-                tech_file_ref2 = requests.get(tech_file_ref1['url'],
-                                 timeout=5).json()
-                download_url = tech_file_ref2['download_url']
-                tech_file = requests.get(download_url).json()
+                TechFileRef2 = requests.get(TechFileRef['url'], timeout=5).json()
+                sTechFileURL = TechFileRef2['download_url']
+                rTechFile = requests.get(sTechFileURL).json() 
             except:
-                print("Wappalyzer technologies json file not available.")
-            if tech_file:
-                for name, details in tech_file.items():
-                    dTechnologies[name.rstrip()] = details
-    # print(dTechnologies.keys())
+                print("Wappalyzer technologies json file %s seen in directory not available." % TechFileRef['url'])
+            if rTechFile:
+                for name, details in rTechFile.items():
+                    dTechnologies[name] = details
     try:
         cursor.execute("DROP TABLE IF EXISTS wapp_technologies")
         cursor.execute("CREATE TABLE IF NOT EXISTS wapp_technologies (name VARCHAR(80), details VARCHAR(4096), " \
                        "PRIMARY KEY (name))")
-        # dWappalyzer = json.loads(sWappalyzerResponse) 
-        # dTechnologies = dWappalyzer.get('technologies')
         sInsertWappTech = """INSERT IGNORE INTO wapp_technologies (name, details) VALUES (%s,%s)""" 
         for sName in dTechnologies:
             params = (sName, json.dumps(dTechnologies.get(sName)))

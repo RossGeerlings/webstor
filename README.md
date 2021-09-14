@@ -285,6 +285,7 @@ MIT licence.
  - Brandon Bailey <Twitter: @ge0stigm4> (Co-designer of original concept)
  - Bob Harold (Guidance on DNS)
  - Neamen Negash <nnegash@umich.<span></span>edu> (Installer)
+ - afreudenreich (Multiple bug fixes and enhancements)
 
 
 ## License and Author

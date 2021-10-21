@@ -74,10 +74,12 @@ future.
                   [--CLEAR-CUSTOM-FINGERPRINTS] [--SHOW-CONFIG]
                   [--SHOW-CONFIG-FULL] [--RUN-MASSCAN]
                   [--SET-MASSCAN-RANGES SETSCANRANGES]
+                  [--ADD-RANGE RANGETOADD] [--DELETE-RANGE RANGETODELETE]
                   [--IMPORT-MASSCAN-RANGES IMPORTSCANRANGES]
-                  [--DELETE-RANGE RANGETODELETE] [--ADD-PATH PATHTOADD]
-                  [--DELETE-PATH PATHTODELETE] [--CLEAR-PATHS]
-                  [--REFRESH-RESPONSES] [--SEARCH-PATTERN SEARCHPATTERN]
+                  [--ADD-PATH PATHTOADD] [--DELETE-PATH PATHTODELETE]
+                  [--CLEAR-PATHS] [--REFRESH-RESPONSES]
+                  [--RESPONSES-ADD-FOR-PATH RESPONSESADDFORPATH]
+                  [--SEARCH-PATTERN SEARCHPATTERN]
                   [--SEARCH-CUSTOM-FINGERPRINT SEARCHFINGERPRINT]
                   [--SEARCH-WAPPALYZER SEARCHWAPPALYZER] [--NO-TSIG-KEY]
                   [--TSIG-KEY-IMPORT IMPORTTSIGFILE]
@@ -135,6 +137,9 @@ optional arguments:
                         default of '/'.
   --REFRESH-RESPONSES, -r
                         Refresh URL responses in DB.
+  --RESPONSES-ADD-FOR-PATH RESPONSESADDFORPATH, -rP RESPONSESADDFORPATH
+                        Add URL responses for a one-time path in with the
+                        current responses in the DB.
   --SEARCH-PATTERN SEARCHPATTERN, -sP SEARCHPATTERN
                         Search for string or regular expression in WebStor
                         database.

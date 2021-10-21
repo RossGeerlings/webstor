@@ -112,6 +112,8 @@ parser.add_argument("--CLEAR-PATHS", "-pC", dest="ClearPaths", default=False, ac
                     help="Clear any custom URL request paths and revert to default of '/'.")
 parser.add_argument("--REFRESH-RESPONSES", "-r", dest="RefreshResponses", default=False, action="store_true", \
                     help="Refresh URL responses in DB.")
+parser.add_argument("--RESPONSES-ADD-FOR-PATH", "-rP", dest="ResponsesAddForPath", default=None, \
+                    help="Add URL responses for a one-time path in with the current responses in the DB.")
 parser.add_argument("--SEARCH-PATTERN", "-sP", dest="SearchPattern", default=None, \
                     help="Search for string or regular expression in WebStor database.")
 parser.add_argument("--SEARCH-CUSTOM-FINGERPRINT", "-sC", dest="SearchFingerprint", default=None, \
@@ -220,7 +222,7 @@ def create_database():
     #Open IP/port combos found by Masscan
     cursor.execute("CREATE TABLE IF NOT EXISTS masscan_results (ip VARCHAR(15), port INT, PRIMARY KEY (ip,port))")
     #Stored responses
-    cursor.execute("CREATE TABLE IF NOT EXISTS responses (host VARCHAR(80), port INT, path VARCHAR(80), " \
+    cursor.execute("CREATE TABLE IF NOT EXISTS responses (host VARCHAR(160), port INT, path VARCHAR(80), " \
                    "response LONGTEXT, PRIMARY KEY (host,port))")
     #Imported Wappalyzer technologies database lets us query by technology name against stored responses
     cursor.execute("CREATE TABLE IF NOT EXISTS wapp_technologies (name VARCHAR(80), details VARCHAR(4096), " \
@@ -666,7 +668,7 @@ def patch_connect(self):
     return
 
 
-def refresh_responses():
+def refresh_responses(sPathToAdd):
     print ("Refreshing responses for targets from most recent Masscan.")
     #Get the list of requests we need to make. Start with Masscan responses
     try:
@@ -697,13 +699,17 @@ def refresh_responses():
     for tPort in lPorts:
         dPorts[tPort[1]] = tPort[0]
 
-    sSQL_Select_Paths = "SELECT * from paths"
-    try:
-        cursor.execute(sSQL_Select_Paths)
-    except Exception as e:
-        print("Error retrieving paths from database: %s", e)
-        return
-    lPaths = cursor.fetchall()
+    if sPathToAdd != None:
+        tPathToAdd = (sPathToAdd,)
+        lPaths = [tPathToAdd]
+    else:
+        sSQL_Select_Paths = "SELECT * from paths"
+        try:
+            cursor.execute(sSQL_Select_Paths)
+        except Exception as e:
+            print("Error retrieving paths from database: %s", e)
+            return
+        lPaths = cursor.fetchall()
 
     lRequests = []
     sSQL_Select_mr = "SELECT * from masscan_results"
@@ -735,13 +741,14 @@ def refresh_responses():
             except KeyError:
                 continue
 
-    try:
-        cursor.execute("DROP TABLE IF EXISTS responses") 
-        cursor.execute("CREATE TABLE IF NOT EXISTS responses (host VARCHAR(80), port INT, path VARCHAR(80), " \
-                       "response LONGTEXT, PRIMARY KEY (host,port))")
-    except Exception as e:
-        print("Error dropping and recreating responses table: %s", e)
-        return
+    if sPathToAdd == None:
+        try:
+            cursor.execute("DROP TABLE IF EXISTS responses") 
+            cursor.execute("CREATE TABLE IF NOT EXISTS responses (host VARCHAR(160), port INT, path VARCHAR(80), " \
+                           "response LONGTEXT, PRIMARY KEY (host,port))")
+        except Exception as e:
+            print("Error dropping and recreating responses table: %s", e)
+            return
 
     print("Using threadpool for %s requests (this may take some time) ..." % iTotalRequests)
     random.shuffle(lRequests)
@@ -1626,7 +1633,9 @@ def main():
     if args.ForceScan != False:
         perform_masscan()
     if args.RefreshResponses != False:
-        refresh_responses()
+        refresh_responses(None)
+    if args.ResponsesAddForPath != None:
+        refresh_responses(args.ResponsesAddForPath)
     if args.SearchPattern != None:
         search_pattern(args.SearchPattern)    
     if args.SearchFingerprint != None:

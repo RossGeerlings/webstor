@@ -1054,7 +1054,7 @@ def download_wappalyzer():
     #Wappalyzer has divided the former technologies.json into many files in a technologies dir.  
     #We'll take all json files from it.
     try:
-        rTechFolder = requests.get("https://api.github.com/repos/AliasIO/wappalyzer/contents/src/technologies?ref=master", \
+        rTechFolder = requests.get("https://api.github.com/repos/censys/wappalyzer/contents/src/technologies?ref=main", \
                       timeout=5).json()
     except:
         print("Wappalyzer technologies directory does not appear to be available.")

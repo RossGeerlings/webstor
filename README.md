@@ -282,8 +282,7 @@ be through the normal options, specifying the appropriate key and server.
 ## Attribution 
 WebStor uses Wappalyzer's technologies database for pre-populated, name-
 indexed technology lookups against WebStor's stored responses.  Wappalyzer
-(https://github.com/AliasIO/wappalyzer) is licensed under the terms of the
-MIT licence.
+is licensed under the terms of the MIT licence.
 
 
 ## Special Thanks
@@ -302,7 +301,7 @@ WebStor is licensed under the terms of the MIT license, reproduced below.
 
 The MIT License
 
-Copyright (c) 2020-2021 The University of Michigan Board of Regents.
+Copyright (c) 2020-2024 The University of Michigan Board of Regents.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation fime-les (the "Software"),
